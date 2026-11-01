@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="ms">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Misi Rukun Wuduk</title>
+  <style>
+    *{box-sizing:border-box}body{margin:0;font-family:system-ui,Arial,sans-serif;background:#10251f;color:#f4fff8;min-height:100vh}
+    main{max-width:850px;margin:auto;padding:24px 16px 48px}.top{text-align:center;margin-bottom:22px}
+    h1{margin:4px 0;color:#b9f5ce;font-size:clamp(28px,6vw,44px)}.sub{color:#c5d8ce}
+    .panel{background:#1b3930;border:1px solid #426456;border-radius:20px;padding:20px;margin:14px 0;box-shadow:0 10px 30px #0003}
+    .meta{display:flex;justify-content:space-between;gap:12px;color:#c5e8d4;font-weight:700}
+    .question{font-size:clamp(20px,4vw,28px);font-weight:750;margin:22px 0}
+    .answers{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+    button{border:0;border-radius:14px;padding:16px;background:#e4f7eb;color:#143328;font-size:17px;font-weight:750;cursor:pointer}
+    button:hover{background:#b9f5ce}button:disabled{opacity:.6;cursor:default}
+    .actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}.actions button{background:#a9e9c0}
+    #status{color:#b9f5ce;min-height:26px;margin-top:14px;font-weight:650}
+    .camera{position:relative;max-width:520px;margin:14px auto 0;display:none}
+    video{width:100%;border-radius:14px;transform:scaleX(-1);background:#07120e}
+    #hand{position:absolute;inset:0;width:100%;height:100%;transform:scaleX(-1);pointer-events:none}
+    .hint{font-size:14px;color:#c5d8ce;line-height:1.5}
+    @media(max-width:520px){.answers{grid-template-columns:1fr}main{padding:18px 12px 36px}}
+  </style>
+</head>
+<body>
+<main>
+  <header class="top"><div>🎮 PERMAINAN PENDIDIKAN ISLAM</div><h1>Misi Rukun Wuduk</h1><div class="sub">Jawab soalan dan kumpulkan 5 bintang ilmu!</div></header>
+  <section class="panel">
+    <div class="meta"><span id="progress">Soalan 1 / 5</span><span id="score">⭐ 0</span></div>
+    <div class="question" id="question">Memuatkan soalan...</div>
+    <div class="answers" id="answers"></div>
+    <div id="status" role="status">Pilih jawapan yang betul.</div>
+    <div class="actions"><button id="next" hidden>Soalan seterusnya →</button><button id="cameraBtn">📷 Aktifkan kawalan tangan</button></div>
+    <p class="hint">Tanpa kamera: tekan pilihan jawapan. Dengan kamera: halakan jari telunjuk pada pilihan dan rapatkan ibu jari dengan telunjuk untuk memilih.</p>
+    <div class="camera" id="cameraBox"><video id="video" autoplay playsinline></video><canvas id="hand"></canvas></div>
+  </section>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+<script>
+const quiz=[
+ {q:"Apakah rukun wuduk yang pertama?",a:["Membasuh muka","Niat","Membasuh kaki","Tertib"],c:1},
+ {q:"Anggota yang wajib dibasuh selepas muka ialah...",a:["Kepala","Telinga","Kedua-dua tangan hingga siku","Kaki"],c:2},
+ {q:"Apakah maksud menyapu kepala?",a:["Membasuh rambut dengan sabun","Menyapu sebahagian kepala dengan air","Mengelap muka","Membasuh telinga sahaja"],c:1},
+ {q:"Anggota terakhir yang dibasuh dalam rukun wuduk ialah...",a:["Muka","Tangan","Kepala","Kedua-dua kaki hingga buku lali"],c:3},
+ {q:"Apakah maksud tertib?",a:["Melakukan rukun mengikut urutan","Membasuh anggota tiga kali","Menggunakan air yang banyak","Membaca doa dengan kuat"],c:0}
+];
+let index=0,score=0,answered=false,pinchReady=true,stream=null;
+const $=id=>document.getElementById(id);
+function render(){
+ answered=false;$("progress").textContent="Soalan "+(index+1)+" / "+quiz.length;$("score").textContent="⭐ "+score;
+ $("question").textContent=quiz[index].q;$("answers").innerHTML="";
+ quiz[index].a.forEach((answer,i)=>{const b=document.createElement("button");b.textContent=(i+1)+". "+answer;b.addEventListener("click",()=>choose(i));$("answers").appendChild(b)});
+ $("next").hidden=true;$("status").textContent="Pilih jawapan yang betul.";
+}
+function choose(i){
+ if(answered)return;answered=true;const correct=i===quiz[index].c;
+ if(correct){score++;$("score").textContent="⭐ "+score;$("status").textContent="Hebat! Jawapan betul. 🌟"}
+ else $("status").textContent="Belum tepat. Jawapan: "+quiz[index].a[quiz[index].c]+".";
+ [...$("answers").children].forEach((b,n)=>{b.disabled=true;if(n===quiz[index].c)b.style.background="#a9e9c0";else if(n===i)b.style.background="#f2b8a9"});
+ $("next").hidden=false;$("next").textContent=index===quiz.length-1?"Lihat keputusan":"Soalan seterusnya →";
+}
+$("next").addEventListener("click",()=>{if(index<quiz.length-1){index++;render()}else{$("question").textContent="Tahniah! Misi selesai 🎉";$("answers").innerHTML="";$("status").textContent="Skor akhir: "+score+" daripada "+quiz.length+" bintang."; $("next").hidden=true}});
+render();
+const video=$("video"),canvas=$("hand"),ctx=canvas.getContext("2d");
+function onResults(results){
+ canvas.width=video.videoWidth||640;canvas.height=video.videoHeight||480;ctx.clearRect(0,0,canvas.width,canvas.height);
+ if(!results.multiHandLandmarks||!results.multiHandLandmarks.length)return;
+ const p=results.multiHandLandmarks[0],tip=p[8],thumb=p[4];
+ const x=(1-tip.x)*canvas.width,y=tip.y*canvas.height;
+ ctx.fillStyle="#ffe66d";ctx.beginPath();ctx.arc(x,y,12,0,Math.PI*2);ctx.fill();
+ const pinching=Math.hypot(tip.x-thumb.x,tip.y-thumb.y)<.055;
+ if(pinching&&pinchReady){
+   pinchReady=false;const rect=canvas.getBoundingClientRect(),vx=rect.left+(x/canvas.width)*rect.width,vy=rect.top+(y/canvas.height)*rect.height;
+   const el=document.elementFromPoint(vx,vy);if(el&&el.tagName==="BUTTON"&&el.parentElement===$("answers"))el.click();
+ }
+ if(!pinching)pinchReady=true;
+}
+$("cameraBtn").addEventListener("click",async()=>{
+ try{
+  $("cameraBtn").disabled=true;$("status").textContent="Meminta kebenaran kamera...";
+  $("cameraBox").style.display="block";
+  const hands=new Hands({locateFile:file=>"https://cdn.jsdelivr.net/npm/@mediapipe/hands/"+file});
+  hands.setOptions({maxNumHands:1,modelComplexity:1,minDetectionConfidence:.65,minTrackingConfidence:.6});
+  hands.onResults(onResults);
+  const camera=new Camera(video,{onFrame:async()=>{await hands.send({image:video})},width:640,height:480});
+  await camera.start();$("status").textContent="Kamera aktif. Tunjuk pilihan dan buat cubitan untuk memilih.";
+ }catch(e){$("status").textContent="Kamera tidak dapat diaktifkan. Semak kebenaran kamera dan cuba lagi."; $("cameraBtn").disabled=false;console.error(e)}
+});
+</script>
+</body>
+</html>
